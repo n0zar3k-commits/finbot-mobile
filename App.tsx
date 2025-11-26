@@ -233,45 +233,53 @@ const App: React.FC = () => {
     switch (state.currentView) {
         case 'dashboard':
             return (
-                <DashboardView 
-                    tasks={state.tasks}
-                    projects={state.projects}
-                    currentUser={currentUser}
-                    onTaskClick={(t) => { setSelectedTask(t); setIsModalOpen(true); }}
-                    onAddTask={() => handleAddTask()}
-                    onUpdateTask={handleUpdateTask}
-                    lang={lang}
-                    initialFilter={dashboardFilter} // Pass the drill-down filter
-                />
+                <div className="h-full overflow-y-auto custom-scrollbar">
+                    <DashboardView 
+                        tasks={state.tasks}
+                        projects={state.projects}
+                        currentUser={currentUser}
+                        onTaskClick={(t) => { setSelectedTask(t); setIsModalOpen(true); }}
+                        onAddTask={() => handleAddTask()}
+                        onUpdateTask={handleUpdateTask}
+                        lang={lang}
+                        initialFilter={dashboardFilter} 
+                    />
+                </div>
             );
         case 'analytics':
             return (
-                <AnalyticsView 
-                    tasks={state.tasks}
-                    projects={state.projects}
-                    users={state.users}
-                    currentUser={currentUser}
-                    lang={lang}
-                    onNavigateToTasks={handleAnalyticsDrillDown}
-                />
+                <div className="h-full overflow-y-auto custom-scrollbar">
+                    <AnalyticsView 
+                        tasks={state.tasks}
+                        projects={state.projects}
+                        users={state.users}
+                        currentUser={currentUser}
+                        lang={lang}
+                        onNavigateToTasks={handleAnalyticsDrillDown}
+                    />
+                </div>
             );
         case 'calendar':
             return (
-                <CalendarView 
-                    tasks={state.tasks}
-                    onTaskClick={(t) => { setSelectedTask(t); setIsModalOpen(true); }}
-                    onTaskDrop={handleTaskDateDrop}
-                    lang={lang}
-                />
+                <div className="h-full flex flex-col overflow-hidden">
+                    <CalendarView 
+                        tasks={state.tasks}
+                        onTaskClick={(t) => { setSelectedTask(t); setIsModalOpen(true); }}
+                        onTaskDrop={handleTaskDateDrop}
+                        lang={lang}
+                    />
+                </div>
             );
         case 'settings':
             return (
-                <SettingsView 
-                    user={currentUser}
-                    workspace={state.workspaceSettings}
-                    settings={state.appSettings}
-                    onUpdateSettings={(s) => setState(prev => ({ ...prev, appSettings: s }))}
-                />
+                <div className="h-full overflow-y-auto custom-scrollbar">
+                    <SettingsView 
+                        user={currentUser}
+                        workspace={state.workspaceSettings}
+                        settings={state.appSettings}
+                        onUpdateSettings={(s) => setState(prev => ({ ...prev, appSettings: s }))}
+                    />
+                </div>
             );
         case 'project':
         default:
@@ -366,7 +374,7 @@ const App: React.FC = () => {
       {/* Main Content */}
       <main className="flex-grow flex flex-col min-w-0 bg-bg dark:bg-darkBg md:overflow-hidden relative transition-colors duration-200">
         {state.currentView !== 'project' && (
-             <div className="md:hidden p-4 flex items-center justify-between">
+             <div className="md:hidden p-4 flex items-center justify-between flex-shrink-0 z-10 bg-bg dark:bg-darkBg">
                 <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 bg-white dark:bg-slate-800 rounded-lg shadow-sm text-slate-500 dark:text-slate-400">
                     <Menu size={24} />
                 </button>
