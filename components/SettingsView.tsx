@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { User, WorkspaceSettings, AppSettings, Language, Theme } from '../types';
 import { User as UserIcon, Bell, Shield, Moon, Sun, Globe } from 'lucide-react';
@@ -77,12 +78,12 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user, workspace, settings, 
       {/* Notifications */}
       <section className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 p-6">
          <h2 className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-6 flex items-center gap-2">
-            <Bell size={20} className="text-indigo-500" /> Notifications
+            <Bell size={20} className="text-indigo-500" /> {t('notifications', lang)}
         </h2>
         <div className="space-y-3">
             {[1, 2, 3, 4].map((i) => (
                 <div key={i} className="flex items-center justify-between">
-                    <span className="text-sm text-slate-600 dark:text-slate-400">Notification Setting {i}</span>
+                    <span className="text-sm text-slate-600 dark:text-slate-400">{t('notificationSetting', lang)} {i}</span>
                     <div className={`w-10 h-6 rounded-full p-1 cursor-pointer transition-colors ${i < 3 ? 'bg-indigo-500' : 'bg-slate-200 dark:bg-slate-600'}`}>
                         <div className={`w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${i < 3 ? 'translate-x-4' : 'translate-x-0'}`} />
                     </div>

@@ -1,3 +1,4 @@
+
 import { Priority, Language } from '../types';
 
 export const generateId = (): string => {
@@ -86,17 +87,25 @@ export const getInitials = (name: string): string => {
 // --- Translations ---
 
 type TranslationKey = 
-  | 'dashboard' | 'calendar' | 'settings' | 'projects' | 'myProfile' 
+  | 'dashboard' | 'calendar' | 'settings' | 'projects' | 'myProfile' | 'analytics'
   | 'newTask' | 'createProject' | 'save' | 'cancel' | 'delete' | 'complete'
   | 'description' | 'checklist' | 'activity' | 'priority' | 'deadline' | 'assignee'
   | 'theme' | 'language' | 'light' | 'dark' | 'saveTask' | 'today' | 'overdue' | 'myTasks'
-  | 'attention' | 'noTasksToday' | 'noOverdue' | 'hello' | 'whatsUp';
+  | 'attention' | 'noTasksToday' | 'noOverdue' | 'hello' | 'whatsUp'
+  | 'totalTasks' | 'completionRate' | 'productivityTrend' | 'tasksByPriority' | 'openTasks' | 'completed'
+  | 'taskTitlePlaceholder' | 'project' | 'tags' | 'time' | 'remind' | 'repeat' | 'next7Days' | 'all'
+  | 'filterByProject' | 'quickActions' | 'reopen' | 'sortBy' | 'sortDefault' | 'sortDate' | 'sortPriority'
+  | 'dragTaskHere' | 'backlog' | 'inProgress' | 'done'
+  | 'filterByAssignee' | 'filterByPriority' | 'me' | 'limitExceeded' | 'quickAddPlaceholder' | 'create'
+  | 'searchPlaceholder' | 'selectProject' | 'period' | 'last7Days' | 'last30Days' | 'last90Days' | 'createdVsCompleted'
+  | 'created' | 'trend' | 'vsPrevious' | 'notifications' | 'notificationSetting' | 'actions' | 'noUpcomingTasks' | 'noPendingTasks';
 
 export const t = (key: TranslationKey, lang: Language): string => {
   const dict: Record<Language, Record<TranslationKey, string>> = {
     ru: {
       dashboard: 'Главная',
       calendar: 'Календарь',
+      analytics: 'Аналитика',
       settings: 'Настройки',
       projects: 'Проекты',
       myProfile: 'Мой профиль',
@@ -106,6 +115,7 @@ export const t = (key: TranslationKey, lang: Language): string => {
       cancel: 'Отмена',
       delete: 'Удалить',
       complete: 'Выполнить',
+      reopen: 'Открыть',
       description: 'Описание',
       checklist: 'Чек-лист',
       activity: 'Активность',
@@ -124,11 +134,57 @@ export const t = (key: TranslationKey, lang: Language): string => {
       noTasksToday: 'На сегодня задач нет. Хорошего дня! ☀️',
       noOverdue: 'Все чисто! Просроченных задач нет. 🚀',
       hello: 'Привет',
-      whatsUp: 'Вот что происходит сегодня.'
+      whatsUp: 'Вот что происходит сегодня.',
+      totalTasks: 'Всего задач',
+      completionRate: 'Завершено',
+      productivityTrend: 'Динамика продуктивности',
+      tasksByPriority: 'Задачи по приоритету',
+      openTasks: 'Открытые задачи',
+      completed: 'Выполнено',
+      taskTitlePlaceholder: 'Название задачи (например, "Купить молоко")',
+      project: 'Проект',
+      tags: 'Метки',
+      time: 'Время',
+      remind: 'Напомнить',
+      repeat: 'Повтор',
+      next7Days: 'Ближайшие 7 дней',
+      all: 'Все',
+      filterByProject: 'По проектам',
+      quickActions: 'Быстрые действия',
+      sortBy: 'Сортировка',
+      sortDefault: 'По умолчанию',
+      sortDate: 'По сроку',
+      sortPriority: 'По приоритету',
+      dragTaskHere: 'Создай задачу или перетащи сюда',
+      backlog: 'Бэклог',
+      inProgress: 'В работе',
+      done: 'Готово',
+      filterByAssignee: 'Исполнитель',
+      filterByPriority: 'Приоритет',
+      me: 'Я',
+      limitExceeded: 'Лимит превышен',
+      quickAddPlaceholder: 'Название задачи...',
+      create: 'Создать',
+      searchPlaceholder: 'Поиск задач...',
+      selectProject: 'Выберите проект',
+      period: 'Период',
+      last7Days: '7 дней',
+      last30Days: '30 дней',
+      last90Days: '90 дней',
+      createdVsCompleted: 'Создано vs Выполнено',
+      created: 'Создано',
+      trend: 'Тренд',
+      vsPrevious: 'vs прошлый период',
+      notifications: 'Уведомления',
+      notificationSetting: 'Настройка уведомлений',
+      actions: 'Действия',
+      noUpcomingTasks: 'На этой неделе пока тихо. Добавь задачи — и мы покажем твою загрузку 😉',
+      noPendingTasks: 'Нет активных задач'
     },
     en: {
       dashboard: 'Dashboard',
       calendar: 'Calendar',
+      analytics: 'Analytics',
       settings: 'Settings',
       projects: 'Projects',
       myProfile: 'My Profile',
@@ -138,6 +194,7 @@ export const t = (key: TranslationKey, lang: Language): string => {
       cancel: 'Cancel',
       delete: 'Delete',
       complete: 'Complete',
+      reopen: 'Reopen',
       description: 'Description',
       checklist: 'Checklist',
       activity: 'Activity',
@@ -156,7 +213,52 @@ export const t = (key: TranslationKey, lang: Language): string => {
       noTasksToday: 'No tasks for today. Have a great day! ☀️',
       noOverdue: 'All clear! No overdue tasks. 🚀',
       hello: 'Hello',
-      whatsUp: 'Here is what\'s happening today.'
+      whatsUp: 'Here is what\'s happening today.',
+      totalTasks: 'Total Tasks',
+      completionRate: 'Completion Rate',
+      productivityTrend: 'Productivity Trend',
+      tasksByPriority: 'Tasks by Priority',
+      openTasks: 'Open Tasks',
+      completed: 'Completed',
+      taskTitlePlaceholder: 'Task title (e.g. "Buy milk")',
+      project: 'Project',
+      tags: 'Tags',
+      time: 'Time',
+      remind: 'Remind',
+      repeat: 'Repeat',
+      next7Days: 'Next 7 Days',
+      all: 'All',
+      filterByProject: 'By Project',
+      quickActions: 'Quick Actions',
+      sortBy: 'Sort by',
+      sortDefault: 'Default',
+      sortDate: 'Date',
+      sortPriority: 'Priority',
+      dragTaskHere: 'Create task or drag here',
+      backlog: 'Backlog',
+      inProgress: 'In Progress',
+      done: 'Done',
+      filterByAssignee: 'Assignee',
+      filterByPriority: 'Priority',
+      me: 'Me',
+      limitExceeded: 'Limit exceeded',
+      quickAddPlaceholder: 'Task title...',
+      create: 'Create',
+      searchPlaceholder: 'Search tasks...',
+      selectProject: 'Select Project',
+      period: 'Period',
+      last7Days: '7 Days',
+      last30Days: '30 Days',
+      last90Days: '90 Days',
+      createdVsCompleted: 'Created vs Completed',
+      created: 'Created',
+      trend: 'Trend',
+      vsPrevious: 'vs previous period',
+      notifications: 'Notifications',
+      notificationSetting: 'Notification Setting',
+      actions: 'Actions',
+      noUpcomingTasks: 'It\'s quiet this week. Add some tasks to see your schedule! 😉',
+      noPendingTasks: 'No pending tasks'
     }
   };
   return dict[lang][key] || key;
@@ -219,6 +321,11 @@ export const priorityStyles = {
   high: { badge: priorityConfig.high.color, dot: priorityConfig.high.dot },
   urgent: { badge: priorityConfig.urgent.color, dot: priorityConfig.urgent.dot },
   critical: { badge: priorityConfig.critical.color, dot: priorityConfig.critical.dot },
+};
+
+export const getPriorityLabel = (priority: Priority, lang: Language): string => {
+  const config = priorityConfig[priority];
+  return lang === 'ru' ? config.labelRu : config.labelEn;
 };
 
 export const roleLabels: Record<string, string> = {

@@ -1,16 +1,23 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Clock, Repeat, MoreHorizontal, Trash2, ArrowRight, Zap, Check, Flag } from 'lucide-react';
-import { Task, RRule } from '../types';
-import { formatTime, isOverdue, isToday } from '../services/utils';
+import { Task, RRule, Language } from '../types';
+import { formatTime, isOverdue, isToday, getPriorityLabel } from '../services/utils';
 
 interface TaskRowProps {
   task: Task;
   onUpdate: (task: Task) => void;
   onDelete: (id: string) => void;
   onComplete: (task: Task) => void;
+  lang?: Language; // Optional prop if needed, defaulting to 'en' internally if not passed, but we should use passed lang
 }
 
-const TaskRow: React.FC<TaskRowProps> = ({ task, onUpdate, onDelete, onComplete }) => {
+// Note: To fully support lang, parent must pass it. Assuming for now we import default or pass it.
+// Since TaskRow signature in original file didn't have lang, we might need to rely on a context or passed prop.
+// For now, let's assume 'ru' as default or passed from parent if updated.
+// Actually, let's update the component to accept lang if passed, or default to 'ru' since the app seems RU-focused in latest prompts.
+
+const TaskRow: React.FC<TaskRowProps> = ({ task, onUpdate, onDelete, onComplete, lang = 'ru' }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [editText, setEditText] = useState(task.title);
@@ -116,7 +123,7 @@ const TaskRow: React.FC<TaskRowProps> = ({ task, onUpdate, onDelete, onComplete 
                     className={`flex items-center text-xs font-semibold px-1.5 py-0.5 rounded-md bg-slate-50 hover:bg-slate-100 transition-colors ${priorityColors[task.priority]}`}
                   >
                     <Flag size={10} className="mr-1 fill-current" />
-                    <span className="capitalize">{task.priority}</span>
+                    <span className="capitalize">{getPriorityLabel(task.priority, lang)}</span>
                   </button>
                 )}
               </div>

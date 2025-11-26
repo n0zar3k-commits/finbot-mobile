@@ -1,9 +1,10 @@
+
 export type Priority = "low" | "normal" | "medium" | "high" | "urgent" | "critical";
 export type Status = "backlog" | "todo" | "in-progress" | "review" | "done";
 export type Language = "ru" | "en";
 export type Theme = "light" | "dark";
 
-export type ViewMode = "dashboard" | "project" | "calendar" | "settings";
+export type ViewMode = "dashboard" | "project" | "calendar" | "settings" | "analytics";
 
 export interface User {
   id: string;
@@ -21,14 +22,24 @@ export interface AppSettings {
   theme: Theme;
 }
 
-export interface Settings { // Old settings type, can be merged or kept for specific modules
+export interface Settings { 
   piGoal: number;
 }
 
 export interface Comment {
   id: string;
-  userId: string; // references User
+  userId: string;
   text: string;
+  createdAt: string;
+}
+
+export type HistoryAction = 'status_change' | 'priority_change' | 'assignee_change' | 'due_date_change' | 'created';
+
+export interface HistoryItem {
+  id: string;
+  userId: string;
+  action: HistoryAction;
+  details: string; // e.g., "changed status to Done"
   createdAt: string;
 }
 
@@ -46,7 +57,7 @@ export interface Tag {
 
 export interface RRule {
   ver: number;
-  freq: 'daily' | 'weekly' | 'monthly' | 'yearly' | 'weekdays';
+  freq: 'daily' | 'weekly' | 'monthly' | 'yearly' | 'weekdays' | 'none';
   interval?: number;
   byweekday?: number[];
   bymonthday?: number;
@@ -76,17 +87,19 @@ export interface Task {
 
   // Recurring & Alerts
   rrule?: RRule;
-  remindOffsets: number[];
+  remindOffsets: number[]; // minutes
 
   // content
   checklist: ChecklistItem[];
   comments: Comment[];
+  history: HistoryItem[];
 }
 
 export interface Column {
   id: string;
   title: string;
   order: number;
+  wipLimit?: number;
 }
 
 export interface Project {

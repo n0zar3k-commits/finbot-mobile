@@ -1,11 +1,13 @@
+
 import React, { useState, useEffect, useRef } from 'react';
-import { X, CheckSquare, Trash2, Clock, Send, Flag, AlignLeft, Save, CheckCircle } from 'lucide-react';
-import { Task, Comment, User, ChecklistItem, Priority, Language } from '../types';
+import { X, CheckSquare, Trash2, Clock, Send, Flag, AlignLeft, Save, CheckCircle, Hash, Tag as TagIcon, Bell, Repeat, Folder, History, Activity, Calendar } from 'lucide-react';
+import { Task, Comment, User, ChecklistItem, Priority, Language, Project, Tag, HistoryItem } from '../types';
 import { formatDateTime, priorityStyles, generateId, formatDate, priorityConfig, t } from '../services/utils';
 
 interface TaskDetailModalProps {
   task: Task | null;
   users: User[];
+  projects: Project[];
   isOpen: boolean;
   onClose: () => void;
   onUpdate: (task: Task) => void;
@@ -17,6 +19,7 @@ interface TaskDetailModalProps {
 const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ 
   task, 
   users, 
+  projects,
   isOpen, 
   onClose, 
   onUpdate,
@@ -29,6 +32,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
   const [localDesc, setLocalDesc] = useState('');
   const [newComment, setNewComment] = useState('');
   const [newCheckItem, setNewCheckItem] = useState('');
+  const [newTag, setNewTag] = useState('');
   const commentsEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -43,12 +47,25 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
     if (commentsEndRef.current) {
       commentsEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [editedTask?.comments.length]);
+  }, [editedTask?.comments.length, editedTask?.history?.length]);
 
   if (!isOpen || !editedTask) return null;
 
-  const handleSaveField = (field: keyof Task, value: any) => {
-    const updated = { ...editedTask, [field]: value, updatedAt: new Date().toISOString() };
+  const addHistory = (action: HistoryItem['action'], details: string) => {
+    if (!currentUser) return [];
+    const item: HistoryItem = {
+        id: generateId(),
+        userId: currentUser.id,
+        action,
+        details,
+        createdAt: new Date().toISOString()
+    };
+    return [...(editedTask.history || []), item];
+  };
+
+  const handleSaveField = (field: keyof Task, value: any, historyDetails?: string) => {
+    const history = historyDetails ? addHistory('status_change', historyDetails) : editedTask.history;
+    const updated = { ...editedTask, [field]: value, history, updatedAt: new Date().toISOString() };
     setEditedTask(updated);
     onUpdate(updated);
   };
@@ -93,50 +110,91 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
     handleSaveField('checklist', updatedChecklist);
   };
 
+  const handleAddTag = (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter' && newTag.trim()) {
+          const tag: Tag = { id: generateId(), name: newTag.trim(), color: 'bg-indigo-100 text-indigo-700' };
+          handleSaveField('tags', [...(editedTask.tags || []), tag]);
+          setNewTag('');
+      }
+  };
+
+  const removeTag = (tagId: string) => {
+      handleSaveField('tags', (editedTask.tags || []).filter(t => t.id !== tagId));
+  };
+
   const toggleComplete = () => {
-    handleSaveField('status', editedTask.status === 'done' ? 'pending' : 'done');
+    const newStatus: 'pending' | 'done' = editedTask.status === 'done' ? 'pending' : 'done';
+    const updated: Task = {
+        ...editedTask,
+        status: newStatus,
+        completedAt: newStatus === 'done' ? new Date().toISOString() : null,
+        history: addHistory('status_change', `changed status to ${newStatus}`),
+        updatedAt: new Date().toISOString()
+    };
+    setEditedTask(updated);
+    onUpdate(updated);
     onClose();
   };
 
   const activeUser = currentUser || users[0];
   const isDone = editedTask.status === 'done';
 
+  // Merge History and Comments for the feed
+  const activityFeed = [
+      ...editedTask.comments.map(c => ({ type: 'comment', date: new Date(c.createdAt), data: c })),
+      ...(editedTask.history || []).map(h => ({ type: 'history', date: new Date(h.createdAt), data: h }))
+  ].sort((a, b) => a.date.getTime() - b.date.getTime());
+
   return (
-    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex justify-center items-start overflow-y-auto pt-10 pb-20 animate-fade-in">
-      {/* Container to handle mobile scrolling properly */}
-      <div className="bg-white dark:bg-slate-900 w-full max-w-4xl rounded-2xl shadow-2xl flex flex-col md:flex-row overflow-hidden min-h-[80vh] mx-4 relative ring-1 ring-white/10">
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex justify-center items-start overflow-y-auto pt-4 md:pt-10 pb-20 animate-fade-in">
+      <div className="bg-white dark:bg-slate-900 w-full max-w-5xl rounded-2xl shadow-2xl flex flex-col md:flex-row overflow-hidden min-h-[85vh] mx-4 relative ring-1 ring-white/10">
         
-        {/* Main Content (Left/Top) */}
-        <div className="flex-grow p-6 md:p-8 flex flex-col gap-6">
+        {/* Main Content (Left) */}
+        <div className="flex-grow p-6 md:p-8 flex flex-col gap-6 overflow-y-auto">
           {/* Header Input */}
-          <div className="flex items-start gap-4">
-            <button 
-              onClick={toggleComplete} 
-              className={`mt-1 flex-shrink-0 w-6 h-6 rounded-full border-[2px] flex items-center justify-center transition-colors ${isDone ? 'bg-indigo-600 border-indigo-600' : 'border-slate-300 dark:border-slate-600 hover:border-indigo-500'}`}
-            >
-               {isDone && <CheckCircle size={14} className="text-white" />}
-            </button>
-            <input 
-              className={`text-2xl font-bold bg-transparent w-full outline-none placeholder:text-slate-300 dark:placeholder:text-slate-600 ${isDone ? 'text-slate-400 line-through' : 'text-slate-800 dark:text-white'}`}
-              value={localTitle}
-              onChange={(e) => setLocalTitle(e.target.value)}
-              onBlur={handleBlurTitle}
-              placeholder={t('newTask', lang)}
-            />
+          <div className="flex flex-col gap-2">
+            <div className="flex items-start gap-3">
+                <button 
+                onClick={toggleComplete} 
+                className={`mt-1.5 flex-shrink-0 w-6 h-6 rounded-full border-[2px] flex items-center justify-center transition-colors ${isDone ? 'bg-indigo-600 border-indigo-600' : 'border-slate-300 dark:border-slate-600 hover:border-indigo-500'}`}
+                >
+                {isDone && <CheckCircle size={14} className="text-white" />}
+                </button>
+                <div className="flex-grow">
+                    <input 
+                    className={`text-2xl font-bold bg-transparent w-full outline-none placeholder:text-slate-300 dark:placeholder:text-slate-600 ${isDone ? 'text-slate-400 line-through' : 'text-slate-800 dark:text-white'}`}
+                    value={localTitle}
+                    onChange={(e) => setLocalTitle(e.target.value)}
+                    onBlur={handleBlurTitle}
+                    placeholder={t('taskTitlePlaceholder', lang)}
+                    />
+                </div>
+            </div>
+            
+            <div className="flex items-center gap-3 ml-9 flex-wrap">
+                 <div className="flex flex-wrap gap-2">
+                    {editedTask.tags?.map(tag => (
+                        <span key={tag.id} className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+                            {tag.name}
+                            <button onClick={() => removeTag(tag.id)} className="hover:text-red-500"><X size={10} /></button>
+                        </span>
+                    ))}
+                 </div>
+                 {/* Project Label */}
+                 <div className="flex items-center gap-1 text-xs font-medium text-slate-400 bg-slate-50 dark:bg-slate-800/50 px-2 py-1 rounded">
+                     <Folder size={12} />
+                     {projects.find(p => p.id === editedTask.projectId)?.name}
+                 </div>
+
+                 {/* Created At */}
+                 <div className="flex items-center gap-1 text-xs text-slate-400" title={formatDateTime(editedTask.createdAt, lang)}>
+                    <Calendar size={12} className="opacity-50" />
+                    <span>{formatDate(editedTask.createdAt, lang)}</span>
+                 </div>
+            </div>
           </div>
 
-          <div className="flex flex-wrap gap-2 items-center text-sm text-slate-500 dark:text-slate-400">
-            <span className="flex items-center gap-1 bg-slate-50 dark:bg-slate-800 px-2 py-1 rounded">
-               <span className="text-xs font-bold uppercase">Status</span> 
-               <span className={`font-semibold ${isDone ? 'text-green-600' : 'text-slate-700 dark:text-slate-300'}`}>
-                 {isDone ? 'Done' : 'Pending'}
-               </span>
-            </span>
-            <span className="text-slate-300 dark:text-slate-600">•</span>
-            <span className="flex items-center gap-1">
-               <Clock size={14} /> {formatDate(editedTask.createdAt, lang)}
-            </span>
-          </div>
+          <div className="h-px bg-slate-100 dark:bg-slate-800 w-full" />
 
           {/* Description */}
           <div className="group">
@@ -144,7 +202,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                 <AlignLeft size={16} /> {t('description', lang)}
             </div>
             <textarea
-                className="w-full min-h-[120px] p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border-transparent hover:bg-slate-100 dark:hover:bg-slate-750 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-primary/20 outline-none resize-none text-sm leading-relaxed transition-all dark:text-slate-200"
+                className="w-full min-h-[100px] p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border-transparent hover:bg-slate-100 dark:hover:bg-slate-750 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-primary/20 outline-none resize-none text-sm leading-relaxed transition-all dark:text-slate-200"
                 placeholder={lang === 'ru' ? "Добавить описание..." : "Add description..."}
                 value={localDesc}
                 onChange={(e) => setLocalDesc(e.target.value)}
@@ -196,28 +254,37 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
             />
           </div>
 
-          {/* Activity/Comments */}
-          <div className="flex-grow flex flex-col">
+          {/* Activity Stream */}
+          <div className="flex-grow flex flex-col min-h-[200px]">
             <div className="flex items-center gap-2 mb-4 text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wide">
-                <Flag size={16} /> {t('activity', lang)}
+                <Activity size={16} /> {t('activity', lang)}
             </div>
             
-            <div className="flex-grow space-y-4 mb-4 overflow-y-auto max-h-60 pr-2">
-                {editedTask.comments.map(comment => {
-                    const author = users.find(u => u.id === comment.userId) || users[0];
+            <div className="flex-grow space-y-4 mb-4 overflow-y-auto max-h-80 pr-2">
+                {activityFeed.map((item, idx) => {
+                    const isComment = item.type === 'comment';
+                    const data = item.data as any;
+                    const author = users.find(u => u.id === data.userId) || users[0];
+                    
                     return (
-                        <div key={comment.id} className="flex gap-3">
-                            <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-300 flex items-center justify-center text-xs font-bold flex-shrink-0">
-                                {author?.initials}
+                        <div key={data.id || idx} className="flex gap-3 text-sm">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${isComment ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-300' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
+                                {isComment ? author?.initials : <History size={14} />}
                             </div>
-                            <div>
+                            <div className="flex-grow">
                                 <div className="flex items-baseline gap-2 mb-1">
-                                    <span className="text-sm font-bold text-textMain dark:text-slate-200">{author?.name}</span>
-                                    <span className="text-xs text-slate-400">{formatDateTime(comment.createdAt, lang)}</span>
+                                    <span className="font-bold text-textMain dark:text-slate-200">{author?.name}</span>
+                                    <span className="text-xs text-slate-400">{formatDateTime(data.createdAt, lang)}</span>
                                 </div>
-                                <div className="text-sm text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800 p-3 rounded-bl-xl rounded-br-xl rounded-tr-xl">
-                                    {comment.text}
-                                </div>
+                                {isComment ? (
+                                    <div className="text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800 p-3 rounded-bl-xl rounded-br-xl rounded-tr-xl">
+                                        {data.text}
+                                    </div>
+                                ) : (
+                                    <div className="text-slate-500 dark:text-slate-400 italic">
+                                        {data.details}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     );
@@ -225,14 +292,14 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                 <div ref={commentsEndRef} />
             </div>
 
-            <div className="flex gap-3 items-start">
+            <div className="flex gap-3 items-start mt-auto">
                 <div className="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs font-bold flex-shrink-0">
                     {activeUser?.initials}
                 </div>
                 <div className="flex-grow relative">
                     <textarea 
                         className="w-full p-3 pr-10 text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-primary/20 outline-none transition-all resize-none shadow-sm dark:text-slate-200"
-                        rows={2}
+                        rows={1}
                         placeholder={lang === 'ru' ? "Комментарий..." : "Write a comment..."}
                         value={newComment}
                         onChange={(e) => setNewComment(e.target.value)}
@@ -250,8 +317,8 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
           </div>
         </div>
 
-        {/* Sidebar Controls (Right/Bottom) */}
-        <div className="w-full md:w-80 bg-slate-50/80 dark:bg-slate-800/50 p-6 flex flex-col gap-6 border-l border-slate-100 dark:border-slate-800">
+        {/* Sidebar Controls (Right) */}
+        <div className="w-full md:w-80 bg-slate-50/80 dark:bg-slate-800/50 p-6 flex flex-col gap-6 border-l border-slate-100 dark:border-slate-800 overflow-y-auto h-full">
            <div className="flex justify-between md:hidden items-center border-b border-slate-200 dark:border-slate-700 pb-4">
               <span className="font-bold text-slate-400">ACTIONS</span>
               <button onClick={onClose}><X size={24} className="text-slate-500" /></button>
@@ -263,24 +330,35 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
 
            <div className="space-y-6 mt-2 md:mt-8">
               
-              {/* Assignee */}
+              {/* Project */}
               <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-400 uppercase">{t('assignee', lang)}</label>
+                  <label className="text-xs font-bold text-slate-400 uppercase flex items-center gap-1"><Folder size={12}/> {t('project', lang)}</label>
                   <select 
                     className="w-full p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm outline-none dark:text-slate-200"
-                    value={editedTask.assigneeId || ''}
-                    onChange={(e) => handleSaveField('assigneeId', e.target.value || undefined)}
+                    value={editedTask.projectId}
+                    onChange={(e) => handleSaveField('projectId', e.target.value)}
                   >
-                      <option value="">--</option>
-                      {users.map(u => (
-                          <option key={u.id} value={u.id}>{u.name}</option>
+                      {projects.map(p => (
+                          <option key={p.id} value={p.id}>{p.name}</option>
                       ))}
                   </select>
               </div>
 
-              {/* Priority - Expanded with grid */}
+               {/* Tags Input */}
+               <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-400 uppercase flex items-center gap-1"><TagIcon size={12}/> {t('tags', lang)}</label>
+                  <input
+                    className="w-full p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm outline-none dark:text-slate-200 placeholder:text-slate-400"
+                    placeholder="Add tag + Enter"
+                    value={newTag}
+                    onChange={(e) => setNewTag(e.target.value)}
+                    onKeyDown={handleAddTag}
+                  />
+              </div>
+
+              {/* Priority */}
               <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-400 uppercase">{t('priority', lang)}</label>
+                  <label className="text-xs font-bold text-slate-400 uppercase flex items-center gap-1"><Flag size={12}/> {t('priority', lang)}</label>
                   <div className="grid grid-cols-3 gap-2">
                       {(['low', 'normal', 'medium', 'high', 'urgent', 'critical'] as Priority[]).map(p => (
                           <button
@@ -293,20 +371,97 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                           </button>
                       ))}
                   </div>
-                  <p className="text-xs text-slate-400 italic mt-1">
-                    {lang === 'ru' ? priorityConfig[editedTask.priority].descRu : priorityConfig[editedTask.priority].descEn}
-                  </p>
               </div>
 
-              {/* Date */}
+              {/* Date & Time */}
               <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-400 uppercase">{t('deadline', lang)}</label>
-                  <input 
-                    type="date"
+                  <label className="text-xs font-bold text-slate-400 uppercase flex items-center gap-1"><Clock size={12}/> {t('deadline', lang)}</label>
+                  <div className="flex gap-2">
+                    <input 
+                        type="date"
+                        className="w-full p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm outline-none dark:text-slate-200"
+                        value={editedTask.dueAt ? editedTask.dueAt.split('T')[0] : ''}
+                        onChange={(e) => {
+                            const datePart = e.target.value;
+                            if (!datePart) {
+                                handleSaveField('dueAt', null);
+                                return;
+                            }
+                            // Preserve time if exists
+                            const current = editedTask.dueAt ? new Date(editedTask.dueAt) : new Date();
+                            const newDate = new Date(datePart);
+                            newDate.setHours(current.getHours(), current.getMinutes());
+                            handleSaveField('dueAt', newDate.toISOString());
+                        }}
+                    />
+                     <input 
+                        type="time"
+                        className="w-24 p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm outline-none dark:text-slate-200"
+                        value={editedTask.dueAt ? new Date(editedTask.dueAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: false}) : ''}
+                        onChange={(e) => {
+                            if (!editedTask.dueAt) return;
+                            const [h, m] = e.target.value.split(':');
+                            const date = new Date(editedTask.dueAt);
+                            date.setHours(parseInt(h), parseInt(m));
+                            handleSaveField('dueAt', date.toISOString());
+                        }}
+                    />
+                  </div>
+              </div>
+
+              {/* Reminders & Repeat */}
+              <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                        <label className="text-xs font-bold text-slate-400 uppercase flex items-center gap-1"><Bell size={12}/> {t('remind', lang)}</label>
+                        <select 
+                            className="w-full p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm outline-none dark:text-slate-200"
+                            onChange={(e) => {
+                                const val = parseInt(e.target.value);
+                                if (val > 0) handleSaveField('remindOffsets', [...(editedTask.remindOffsets || []), val]);
+                            }}
+                        >
+                            <option value="0">Add...</option>
+                            <option value="15">15 min</option>
+                            <option value="60">1 hour</option>
+                            <option value="1440">1 day</option>
+                        </select>
+                         <div className="flex flex-wrap gap-1 mt-1">
+                             {(editedTask.remindOffsets || []).map(r => (
+                                 <span key={r} className="text-[10px] bg-yellow-50 text-yellow-700 px-1 rounded">{r}m</span>
+                             ))}
+                         </div>
+                  </div>
+                   <div className="space-y-1">
+                        <label className="text-xs font-bold text-slate-400 uppercase flex items-center gap-1"><Repeat size={12}/> {t('repeat', lang)}</label>
+                        <select 
+                            className="w-full p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm outline-none dark:text-slate-200"
+                            value={editedTask.rrule?.freq || 'none'}
+                            onChange={(e) => {
+                                const freq = e.target.value as any;
+                                handleSaveField('rrule', freq === 'none' ? null : { ver: 1, freq });
+                            }}
+                        >
+                            <option value="none">No</option>
+                            <option value="daily">Daily</option>
+                            <option value="weekly">Weekly</option>
+                            <option value="monthly">Monthly</option>
+                        </select>
+                  </div>
+              </div>
+              
+              {/* Assignee */}
+               <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-400 uppercase">{t('assignee', lang)}</label>
+                  <select 
                     className="w-full p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm outline-none dark:text-slate-200"
-                    value={editedTask.dueAt ? editedTask.dueAt.split('T')[0] : ''}
-                    onChange={(e) => handleSaveField('dueAt', e.target.value ? new Date(e.target.value).toISOString() : null)}
-                  />
+                    value={editedTask.assigneeId || ''}
+                    onChange={(e) => handleSaveField('assigneeId', e.target.value || undefined)}
+                  >
+                      <option value="">--</option>
+                      {users.map(u => (
+                          <option key={u.id} value={u.id}>{u.name}</option>
+                      ))}
+                  </select>
               </div>
 
               <div className="h-px bg-slate-200 dark:bg-slate-700 my-2" />
@@ -324,9 +479,9 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
               <div className="flex gap-2">
                    <button 
                     onClick={toggleComplete}
-                    className={`flex-1 py-2 rounded-xl text-sm font-medium border flex items-center justify-center gap-2 transition-colors ${isDone ? 'border-slate-200 text-slate-500 hover:bg-slate-50' : 'border-green-200 text-green-600 bg-green-50 hover:bg-green-100 dark:bg-green-900/20 dark:border-green-900 dark:text-green-400'}`}
+                    className={`flex-1 py-2 rounded-xl text-sm font-medium border flex items-center justify-center gap-2 transition-colors ${isDone ? 'border-slate-200 text-slate-500 hover:bg-slate-50 dark:border-slate-700' : 'border-green-200 text-green-600 bg-green-50 hover:bg-green-100 dark:bg-green-900/20 dark:border-green-900 dark:text-green-400'}`}
                   >
-                      <CheckCircle size={16} /> {isDone ? 'Reopen' : t('complete', lang)}
+                      <CheckCircle size={16} /> {isDone ? t('reopen', lang) : t('complete', lang)}
                   </button>
                   <button 
                     onClick={() => { if (confirm(t('delete', lang) + '?')) { onDelete(editedTask.id); onClose(); }}}

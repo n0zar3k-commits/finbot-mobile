@@ -1,3 +1,4 @@
+
 import React, { useMemo } from 'react';
 import { AreaChart, Area, Tooltip, ResponsiveContainer, XAxis } from 'recharts';
 import { Task, Settings } from '../types';

@@ -1,10 +1,12 @@
+
 import React, { useState, useEffect } from 'react';
-import { Layout, Plus, Home, Menu, X, Calendar, Settings, Hash, Layers } from 'lucide-react';
+import { Layout, Plus, Home, Menu, X, Calendar, Settings, Hash, Layers, BarChart2 } from 'lucide-react';
 import { Project, Task, User, AppState, ViewMode, WorkspaceSettings, Priority } from './types';
 import KanbanBoard from './components/KanbanBoard';
 import TaskDetailModal from './components/TaskDetailModal';
 import DashboardView from './components/DashboardView';
 import CalendarView from './components/CalendarView';
+import AnalyticsView from './components/AnalyticsView';
 import SettingsView from './components/SettingsView';
 import { generateId, t } from './services/utils';
 
@@ -23,7 +25,7 @@ const INITIAL_PROJECTS: Project[] = [
     workspaceId: 'w1',
     columns: [
       { id: 'c1', title: 'Backlog', order: 0 },
-      { id: 'c2', title: 'In Progress', order: 1 },
+      { id: 'c2', title: 'In Progress', order: 1, wipLimit: 3 }, // Added WIP limit
       { id: 'c3', title: 'Done', order: 2 }
     ]
   }
@@ -54,6 +56,9 @@ const App: React.FC = () => {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
+  // State for Navigation with Params (e.g. Analytics -> Dashboard drilldown)
+  const [dashboardFilter, setDashboardFilter] = useState<string | null>(null);
 
   // Apply Theme
   useEffect(() => {
@@ -132,6 +137,7 @@ const App: React.FC = () => {
       remindOffsets: [],
       tags: [],
       comments: [],
+      history: [],
       checklist: [],
       authorId: currentUser.id,
       assigneeId: currentUser.id, 
@@ -142,6 +148,29 @@ const App: React.FC = () => {
     setState(prev => ({ ...prev, tasks: [...prev.tasks, newTask] }));
     setSelectedTask(newTask);
     setIsModalOpen(true);
+  };
+
+  const handleCreateTask = (title: string, columnId: string) => {
+    if (!currentProject) return;
+    const newTask: Task = {
+      id: generateId(),
+      projectId: currentProject.id,
+      columnId: columnId,
+      title: title,
+      priority: 'normal',
+      status: 'pending',
+      remindOffsets: [],
+      tags: [],
+      comments: [],
+      history: [],
+      checklist: [],
+      authorId: currentUser.id,
+      assigneeId: currentUser.id, 
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      dueAt: null // No deadline by default for quick add
+    };
+    setState(prev => ({ ...prev, tasks: [...prev.tasks, newTask] }));
   };
 
   const handleUpdateTask = (updatedTask: Task) => {
@@ -169,7 +198,7 @@ const App: React.FC = () => {
         workspaceId: state.workspaceSettings.name,
         columns: [
           { id: generateId(), title: 'To Do', order: 0 },
-          { id: generateId(), title: 'In Progress', order: 1 },
+          { id: generateId(), title: 'In Progress', order: 1, wipLimit: 5 },
           { id: generateId(), title: 'Done', order: 2 }
         ]
       };
@@ -189,7 +218,13 @@ const App: React.FC = () => {
         currentView: view, 
         currentProjectId: projectId || prev.currentProjectId 
     }));
+    setDashboardFilter(null); // Reset filter when navigating normally
     setIsMobileMenuOpen(false);
+  };
+  
+  const handleAnalyticsDrillDown = (filter: string) => {
+      setDashboardFilter(filter);
+      navigateTo('dashboard');
   };
 
   // --- Renderers ---
@@ -204,7 +239,20 @@ const App: React.FC = () => {
                     currentUser={currentUser}
                     onTaskClick={(t) => { setSelectedTask(t); setIsModalOpen(true); }}
                     onAddTask={() => handleAddTask()}
+                    onUpdateTask={handleUpdateTask}
                     lang={lang}
+                    initialFilter={dashboardFilter} // Pass the drill-down filter
+                />
+            );
+        case 'analytics':
+            return (
+                <AnalyticsView 
+                    tasks={state.tasks}
+                    projects={state.projects}
+                    users={state.users}
+                    currentUser={currentUser}
+                    lang={lang}
+                    onNavigateToTasks={handleAnalyticsDrillDown}
                 />
             );
         case 'calendar':
@@ -251,9 +299,12 @@ const App: React.FC = () => {
                             project={currentProject}
                             tasks={projectTasks}
                             users={state.users}
+                            currentUser={currentUser}
                             onTaskMove={handleTaskMove}
                             onTaskClick={(task) => { setSelectedTask(task); setIsModalOpen(true); }}
                             onAddTask={handleAddTask}
+                            onCreateTask={handleCreateTask}
+                            onUpdateTask={handleUpdateTask}
                             lang={lang}
                         />
                     </div>
@@ -280,6 +331,9 @@ const App: React.FC = () => {
             </button>
             <button onClick={() => navigateTo('calendar')} className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all ${state.currentView === 'calendar' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}>
                 <Calendar size={18} /> {t('calendar', lang)}
+            </button>
+             <button onClick={() => navigateTo('analytics')} className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all ${state.currentView === 'analytics' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}>
+                <BarChart2 size={18} /> {t('analytics', lang)}
             </button>
         </div>
 
@@ -328,6 +382,7 @@ const App: React.FC = () => {
           <button onClick={() => navigateTo('dashboard')} className={`p-2 rounded-xl ${state.currentView === 'dashboard' ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20' : 'text-slate-400'}`}><Home size={24} /></button>
           <button onClick={() => navigateTo('project')} className={`p-2 rounded-xl ${state.currentView === 'project' ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20' : 'text-slate-400'}`}><Layers size={24} /></button>
           <button onClick={() => navigateTo('calendar')} className={`p-2 rounded-xl ${state.currentView === 'calendar' ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20' : 'text-slate-400'}`}><Calendar size={24} /></button>
+           <button onClick={() => navigateTo('analytics')} className={`p-2 rounded-xl ${state.currentView === 'analytics' ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20' : 'text-slate-400'}`}><BarChart2 size={24} /></button>
           <button onClick={() => navigateTo('settings')} className={`p-2 rounded-xl ${state.currentView === 'settings' ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20' : 'text-slate-400'}`}><Settings size={24} /></button>
       </div>
 
@@ -365,6 +420,7 @@ const App: React.FC = () => {
         isOpen={isModalOpen}
         task={selectedTask}
         users={state.users}
+        projects={state.projects}
         currentUser={currentUser}
         onClose={() => setIsModalOpen(false)}
         onUpdate={handleUpdateTask}
