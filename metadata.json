@@ -1,0 +1,5 @@
+{
+  "name": "FlowDay Planner",
+  "description": "A lightweight, privacy-focused daily planner with natural language input, recurring tasks, and productivity tracking. Works offline.",
+  "requestFramePermissions": []
+}
